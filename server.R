@@ -373,7 +373,7 @@ server <- function(input, output, session){
   
   output$title_panel1 <- renderText({
     paste0("All World Cases: ", World2$Cases_All, 
-           ", All World Deaths ", World2$Deaths_All,
+           ", All World Deaths: ", World2$Deaths_All,
            ", New World Cases: ", World2$Cases_New,
            ", New World Deaths: ", World2$Deaths_New)
   })

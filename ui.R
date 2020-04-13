@@ -34,15 +34,20 @@ ui <- fluidPage(theme = shinytheme("spacelab"),
     
     titlePanel("COVID-19 Tracker | Plot, Table"),
     h6(textOutput("title_panel1")),
-    h6(textOutput("title_panel2")),
-    h6(textOutput("title_panel3")),
-    h6(textOutput("title_panel4")),
+    #h6(textOutput("title_panel2")),
+    #h6(textOutput("title_panel3")),
+    #h6(textOutput("title_panel4")),
     h6(textOutput("title_panel5")),
     
     tabsetPanel(type = "tabs",
-                tabPanel("Plot", uiOutput('plot')),
+                tabPanel("Plot", uiOutput('plot'),
+                         h6("Note: countries or US counties with few data points will
+                            not have regressed lines, and revert the plot
+                            to scatterpoints.")),
+                
                 tabPanel("Table",  h2("Table of Data"),
                          DT::dataTableOutput("table")),
+                
                 tabPanel("Instructions", 
                          
                          h2('Instructions for manual plots and the table'),
@@ -99,18 +104,27 @@ https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-
                 
                 tabPanel("About", 
                          h5("The COVID-19 tracker is an interactive application
-                            that uses the most recent COVID-19 data to regressed produce scatter 
-                            plots of countries and/or US counties chosen by the user. Single or
-                            multplie locations can be plotted on one plot. A sortable table of
-                            results is also generated from the same user input containing 
+                            using the most recent COVID-19 data to produce regressed scatter 
+                            plots of countries and/or US counties chosen by the user."),
+                         
+                         h5("Single or multiple locations can be plotted. 
+                         A sortable table of
+                            results is also generated from the same user input."),
+                            
+                            h5("The table contains 
                             numerical data of new and cumulative cases and deaths, cases and 
                             deaths by population, and deaths per cases. Review of the data can
                             also be performed by categories other than location."),
-                         br(),
+                         
+                         #br(),
+                         
                          h5("Automated plots are also available in barplot format, showing the 
                             Top 10 US counties for new and cumulative cases from the most 
                             recent data available. Plots of new and cumulative COVID-19 deaths
-                            are also available to plot for these Top 10 counties.")
+                            are also available to plot for these Top 10 counties."),
+                         
+                         h5("The code for this Shinyapp is available at 
+                            https://github.com/KayneWM/COVID-19-tracker")
                          
                 )
     ),
