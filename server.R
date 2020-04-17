@@ -1,6 +1,7 @@
 library(utils)
 library(DT)
 library(tidyverse)
+library(scales)
 #counties <- read.csv(url("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-counties.csv"))
 #counties$date <- as.Date(counties$date, format = "%m/%d/%Y") #need to be converted here so that the arrange works correctly
 
@@ -24,6 +25,12 @@ countries$dateRep <- as.Date(countries$dateRep, format = "%d/%m/%Y") #need to be
 #detach(package:plyr)
 library(dplyr)
 #Make sure that you have the “utils” and “httr” packages installed.
+
+
+
+USstates <- read.csv(url("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv"))
+USstates$date <- as.Date(USstates$date, format = "%Y-%m-%d")
+
 
 #########################################################################
 ################# LOAD POPULATIONS ######################################
@@ -126,13 +133,7 @@ counties <-  counties %>% arrange(location, date) %>% group_by(location) %>%
 counties <-  counties %>% arrange(location, date) %>% group_by(location) %>%
   mutate(deathsnew = deathssum - lag(deathssum, default = first(deathssum)))
 
-#########################################################################
-################### STATES HAVE NOT DONE ANYTHING WITH THESE YET ########
-#########################################################################
 
-#urlfile2="https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-#states.csv"
-#states<-read_csv(url(urlfile2))
-#states
 
 
 ##########################################################################
@@ -202,8 +203,8 @@ World <- country %>%
   mutate(Cases_New = sum(casesnew)) %>%
   mutate(Deaths_New = sum(deathsnew))
 
-World2 <- c("Cases_All"=max(World$Cases_All), "Deaths_All"=max(World$Deaths_All),
-            "Cases_New"=max(World$Cases_New),"Deaths_New"=max(World$Deaths_New))
+World2 <- c("Cases_All"=comma(max(World$Cases_All)), "Deaths_All"=comma(max(World$Deaths_All)),
+            "Cases_New"=comma(max(World$Cases_New)),"Deaths_New"=comma(max(World$Deaths_New)))
 
 World2<- as.data.frame(World2)
 World2 <- as.data.frame(t(World2))
@@ -218,7 +219,7 @@ World2$Date <- as.Date(max(World$date))
 ###############TOP 10 CODE ##########################################
 
 ## COUNTY ORIGINAL top ten
-## change to date field, andd 'days' category
+## change to date field, and 'days' category
 
 library(dplyr)
 library(zoo)
@@ -347,6 +348,7 @@ ratedata_n_sub3$date <- format(ratedata_n_sub3$date,'%A, %B %d, %Y')
 ####################### SERVER ################################################
 
 server <- function(input, output, session){
+  
   dataset <- reactive({
     get(input$dataset)
   })
@@ -354,11 +356,28 @@ server <- function(input, output, session){
     plotinfo <- reactive({
     get(input$plotinfo)
   })
+    
+    
+    plotinfo2 <- reactive({
+      get(input$plotinfo2)
+    })
   
-  
+    
+    
   observe({
-    updateSelectInput(session, "column", choices = names(dataset())) 
-  })
+  updateSelectInput(session, "column", choices = names(dataset()))  ##original one
+   })
+  
+
+  
+  #observe({
+  #updateSelectInput(session, "column", choices = names(dataset() %in% c("location","date")))
+  #})
+  
+    
+  #  column <- reactive({
+  #    get(input$column)
+  #  })
   
   observeEvent(input$column, {
     column_levels <- as.character(sort(unique(
@@ -373,9 +392,9 @@ server <- function(input, output, session){
   
   output$title_panel1 <- renderText({
     paste0("All World Cases: ", World2$Cases_All, 
-           ", All World Deaths: ", World2$Deaths_All,
-           ", New World Cases: ", World2$Cases_New,
-           ", New World Deaths: ", World2$Deaths_New)
+           "; All World Deaths: ", World2$Deaths_All,
+           "; New World Cases: ", World2$Cases_New,
+           "; New World Deaths: ", World2$Deaths_New)
   })
   
 #  output$title_panel2 <- renderText({
@@ -398,19 +417,22 @@ server <- function(input, output, session){
   ################# CHOICES OF PLOTS ###############
   
   output$plot <- renderUI({
+    
     if(input$plotinfo=="Cases"){
       output$plot1<-renderPlot({
         dataplot <- dataset()
         
         theme_set(theme_bw())  # pre-set the bw theme.
-        g <- ggplot(data=subset(dataset(), dataset()[[input$column]] == input$level), aes(x=Days,y=casessum)) + 
+        g <- ggplot(data=subset(dataset(), dataset()[[input$column]] == input$level), 
+                    aes(x=Days,y=casessum)) + 
           labs(subtitle="Cases over Time by Location",
                title="Bubble chart | Cases, Deaths",x="Days",y="Cases")+
          geom_jitter(aes(col=location, size=deathssum)) + 
-          geom_smooth(aes(col=location), method="loess", se=F)
+          geom_smooth(aes(col=location), method="loess", se=F)+ 
+          scale_y_continuous(labels = comma)
         
         if(input$logarithmicY)
-          g <- g + scale_y_log10()
+          g <- g + scale_y_log10(labels = function(x) format(x, scientific = FALSE))
         
         return(g)
         
@@ -423,11 +445,13 @@ server <- function(input, output, session){
         dataplot <- dataset()
         
         theme_set(theme_bw())  # pre-set the bw theme.
-        g <- ggplot(data=subset(dataset(), dataset()[[input$column]] == input$level), aes(x=Days,y=deathssum)) + 
+        g <- ggplot(data=subset(dataset(), dataset()[[input$column]] == input$level), 
+                    aes(x=Days,y=deathssum)) + 
           labs(subtitle="Deaths over Time by Location",
                title="Bubble chart | Deaths",x="Days",y="Log[Deaths]")+
          geom_jitter(aes(col=location, size=casessum)) + 
-          geom_smooth(aes(col=location), method="loess", se=F) 
+          geom_smooth(aes(col=location), method="loess", se=F) + 
+          scale_y_continuous(labels = comma)
         
         if(input$logarithmicY)
           g <- g + scale_y_log10()
@@ -445,11 +469,13 @@ server <- function(input, output, session){
         dataplot <- dataset()
         
         theme_set(theme_bw())  # pre-set the bw theme.
-        g <- ggplot(data=subset(dataset(), dataset()[[input$column]] == input$level), aes(x=Days,y=casessum/population*100000)) + 
+        g <- ggplot(data=subset(dataset(), dataset()[[input$column]] == input$level), 
+                    aes(x=Days,y=casessum/population*100000)) + 
           labs(subtitle="Cases (Per 100K People) over Time by Location",
                title="Bubble chart | Cases, Deaths",x="Days",y="New Cases Per 100K People") +
         geom_jitter(aes(col=location, size=deathssum)) + 
-          geom_smooth(aes(col=location), method="loess", se=F) 
+          geom_smooth(aes(col=location), method="loess", se=F)+ 
+          scale_y_continuous(labels = comma) 
         
         if(input$logarithmicY)
           g <- g + scale_y_log10()
@@ -470,11 +496,13 @@ server <- function(input, output, session){
         dataplot <- dataset()
         
         theme_set(theme_bw())  # pre-set the bw theme.
-        g <- ggplot(data=subset(dataset(), dataset()[[input$column]] == input$level), aes(x=Days,y=deathssum/population*100000)) + 
+        g <- ggplot(data=subset(dataset(), dataset()[[input$column]] == input$level), 
+                    aes(x=Days,y=deathssum/population*100000)) + 
           labs(subtitle="Deaths (Per 100K People) over Time by Location",
                title="Bubble chart | Deaths",x="Days",y="Deaths Per 100K People") +
                 geom_jitter(aes(col=location, size=casessum)) + 
-          geom_smooth(aes(col=location), method="loess", se=F)  
+          geom_smooth(aes(col=location), method="loess", se=F) + 
+          scale_y_continuous(labels = comma) 
           
         if(input$logarithmicY)
           g <- g + scale_y_log10()
@@ -492,11 +520,13 @@ server <- function(input, output, session){
         dataplot <- dataset()
         
         theme_set(theme_bw())  # pre-set the bw theme.
-        g <- ggplot(data=subset(dataset(), dataset()[[input$column]] == input$level), aes(x=Days,y=deathssum/casessum*1000)) + 
+        g <- ggplot(data=subset(dataset(), dataset()[[input$column]] == input$level), 
+                    aes(x=Days,y=deathssum/casessum*1000)) + 
           labs(subtitle="Deaths per 1000 Cases over Time by Location",
                title="Bubble chart | Deaths per 1000 Cases",x="Days",y="Deaths per 1000 Cases") +
                 geom_jitter(aes(col=location, size=deathssum)) + 
-          geom_smooth(aes(col=location), method="loess", se=F)
+          geom_smooth(aes(col=location), method="loess", se=F)+ 
+          scale_y_continuous(labels = comma)
         
         if(input$logarithmicY)
           g <- g + scale_y_log10()
@@ -507,16 +537,24 @@ server <- function(input, output, session){
       plotOutput("plot4")
     }
     
+  })
     
-    else if(input$plotinfo=="Top_10_US_Cumulative_Cases"){
+############
+    
+    output$plotauto <- renderUI({
+    
+    if(input$plotinfo2=="Top_10_US_Cumulative_Cases"){
       
       output$plot5<-renderPlot({
         theme_set(theme_bw())
-       g <- ggplot(data=ratedata_o_sub1 , aes(x=reorder(location,-casessum), y=casessum, fill=date)) +
+       g <- ggplot(data=ratedata_o_sub1 , 
+                   aes(x=reorder(location,-casessum), y=casessum, fill=date)) +
           geom_bar(stat="identity")+
           labs(subtitle="Top 10 by US County/City",
                title="Cumulative Cases",x="Counties",y="Cumulative Cases") +
-          theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+theme(plot.title = element_text(hjust = 0.5))
+          theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
+         theme(plot.title = element_text(hjust = 0.5))+ 
+         scale_y_continuous(labels = comma)
      
        if(input$logarithmicY)
          g <- g + scale_y_log10()
@@ -529,15 +567,18 @@ server <- function(input, output, session){
     }
     
     
-    else if(input$plotinfo=="Top_10_US_Cumulative_Deaths"){
+    else if(input$plotinfo2=="Top_10_US_Cumulative_Deaths"){
       
       output$plot5a<-renderPlot({
         theme_set(theme_bw())
-        g <- ggplot(data=ratedata_o_sub1a , aes(x=reorder(location,-deathssum), y=deathssum, fill=date)) +
+        g <- ggplot(data=ratedata_o_sub1a , 
+                    aes(x=reorder(location,-deathssum), y=deathssum, fill=date)) +
           geom_bar(stat="identity")+
           labs(subtitle="Top 10 by US County/City",
                title="Cumulative Deaths",x="Counties",y="Cumulative Deaths") +
-          theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+theme(plot.title = element_text(hjust = 0.5))
+          theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
+          theme(plot.title = element_text(hjust = 0.5))+ 
+          scale_y_continuous(labels = comma)
         
         if(input$logarithmicY)
           g <- g + scale_y_log10()
@@ -549,16 +590,18 @@ server <- function(input, output, session){
       plotOutput("plot5a")
     }
     
-    else if(input$plotinfo=="Top_10_US_Cumulative_Cases_by_Population"){
+    else if(input$plotinfo2=="Top_10_US_Cumulative_Cases_by_Population"){
       
       output$plot6<-renderPlot({
         theme_set(theme_bw())  # pre-set the bw theme.
-       g <- ggplot(data=ratedata_o_sub2, aes(x=reorder(location,-casepop),y=casepop, fill=date)) +
+       g <- ggplot(data=ratedata_o_sub2, 
+                   aes(x=reorder(location,-casepop),y=casepop, fill=date)) +
           geom_bar(stat="identity")+
           labs(subtitle="Top 10 by US County/City",
                title="Cumulative Cases by 100K People",x="Counties",y="Cumulative Cases by 100K People") +
           theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
-          theme(plot.title = element_text(hjust = 0.5))
+          theme(plot.title = element_text(hjust = 0.5))+ 
+         scale_y_continuous(labels = comma)
        
        if(input$logarithmicY)
          g <- g + scale_y_log10()
@@ -570,7 +613,7 @@ server <- function(input, output, session){
       plotOutput("plot6")
     }
     
-    else if(input$plotinfo=="Top_10_US_Cumulative_Deaths_by_Population"){
+    else if(input$plotinfo2=="Top_10_US_Cumulative_Deaths_by_Population"){
       
       output$plot7<-renderPlot({
         theme_set(theme_bw())  # pre-set the bw theme.
@@ -578,7 +621,8 @@ server <- function(input, output, session){
           labs(subtitle="Top 10 by US County/City",
                title="Cumulative Deaths by 100K People",x="Counties",y="Cumulative Deaths by 100K People") +
           theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
-          theme(plot.title = element_text(hjust = 0.5))
+          theme(plot.title = element_text(hjust = 0.5))+ 
+          scale_y_continuous(labels = comma)
         
         if(input$logarithmicY)
           g <- g + scale_y_log10()
@@ -590,7 +634,7 @@ server <- function(input, output, session){
     }
     
     
-    else if(input$plotinfo=="Top_10_US_New_Cases"){
+    else if(input$plotinfo2=="Top_10_US_New_Cases"){
       
       output$plot8<-renderPlot({
         theme_set(theme_bw())
@@ -598,7 +642,9 @@ server <- function(input, output, session){
           geom_bar(stat="identity")+
           labs(subtitle="Top 10 by US County/City",
                title="New Cases",x="Counties",y="New Cases") +
-          theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+theme(plot.title = element_text(hjust = 0.5))
+          theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
+          theme(plot.title = element_text(hjust = 0.5))+ 
+          scale_y_continuous(labels = comma)
         
         if(input$logarithmicY)
           g <- g + scale_y_log10()
@@ -611,15 +657,17 @@ server <- function(input, output, session){
     }
     
     
-    else if(input$plotinfo=="Top_10_US_New_Deaths"){
+    else if(input$plotinfo2=="Top_10_US_New_Deaths"){
       
       output$plot8a<-renderPlot({
         theme_set(theme_bw())
-        g <- ggplot(data=ratedata_n_sub1a , aes(x=reorder(n), y=deathsnew, fill=date)) +
+        g <- ggplot(data=ratedata_n_sub1a , aes(x=reorder(n), y=deathsnew , fill=date)) +
           geom_bar(stat="identity")+
           labs(subtitle="Top 10 by US County/City",
                title="New Deaths",x="Counties",y="New Deaths") +
-          theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+theme(plot.title = element_text(hjust = 0.5))
+          theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
+          theme(plot.title = element_text(hjust = 0.5))+ 
+          scale_y_continuous(labels = comma)
         
         if(input$logarithmicY)
           g <- g + scale_y_log10()
@@ -631,7 +679,7 @@ server <- function(input, output, session){
       plotOutput("plot8a")
     }
     
-    else if(input$plotinfo=="Top_10_US_New_Cases_by_Population"){
+    else if(input$plotinfo2=="Top_10_US_New_Cases_by_Population"){
       
       output$plot9<-renderPlot({
         theme_set(theme_bw())  # pre-set the bw theme.
@@ -640,7 +688,8 @@ server <- function(input, output, session){
           labs(subtitle="Top 10 by US County/City",
                title="New Cases by 100K People",x="Counties",y="New Cases by 100K People") +
           theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
-          theme(plot.title = element_text(hjust = 0.5))
+          theme(plot.title = element_text(hjust = 0.5))+ 
+          scale_y_continuous(labels = comma)
         
         if(input$logarithmicY)
           g <- g + scale_y_log10()
@@ -652,7 +701,7 @@ server <- function(input, output, session){
       plotOutput("plot9")
     }
     
-    else if(input$plotinfo=="Top_10_US_New_Deaths_by_Population"){
+    else if(input$plotinfo2=="Top_10_US_New_Deaths_by_Population"){
       
       output$plot10<-renderPlot({
         theme_set(theme_bw())  # pre-set the bw theme.
@@ -660,7 +709,8 @@ server <- function(input, output, session){
           labs(subtitle="Top 10 by US County/City",
                title="New Deaths by 100K People",x="Counties",y="New Deaths by 100K People") +
           theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
-          theme(plot.title = element_text(hjust = 0.5))
+          theme(plot.title = element_text(hjust = 0.5))+ 
+          scale_y_continuous(labels = comma)
         
         if(input$logarithmicY)
           g <- g + scale_y_log10()
