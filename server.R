@@ -30,6 +30,7 @@ library(dplyr)
 
 USstates <- read.csv(url("https://raw.githubusercontent.com/nytimes/covid-19-data/master/us-states.csv"))
 USstates$date <- as.Date(USstates$date, format = "%Y-%m-%d")
+USstates$fips <- as.numeric(USstates$fips)
 
 
 #########################################################################
@@ -41,12 +42,17 @@ USstates$date <- as.Date(USstates$date, format = "%Y-%m-%d")
 library(usmap)
 data(countypop)
 data(citypop)
+data(statepop)
+statepop$fips <- as.numeric(statepop$fips)
 
 keeps <- c("fips","pop_2015") #what to keep from country database
 countypopmerge <- countypop[ , (names(countypop) %in% keeps)]
 
 keeps <- c("most_populous_city","city_pop") #keep from city
 citypopmerge <- citypop[ , (names(citypop) %in% keeps)]
+
+keeps <- c("fips","pop_2015") #keep from state
+statepopmerge <- statepop[ , (names(statepop) %in% keeps)]
 
 ############################################################################
 ###################  LOAD COUNTRIES ########################################
@@ -100,6 +106,8 @@ library (readr)
 counties <- merge(countypopmerge,counties,by="fips") #merge two county databases
 names(counties)[names(counties) == "pop_2015"] <- "population" #rename location
 
+USstates <- merge(statepopmerge,USstates,by="fips") #merge two county databases
+names(USstates)[names(USstates) == "pop_2015"] <- "population" #rename location
 
 #since there are duplicate counties in different states, need to paste county and state into the location column
 
@@ -117,15 +125,21 @@ names(citypopmerge)[names(citypopmerge) == "most_populous_city"] <- "location" #
 names(citypopmerge)[names(citypopmerge) == "city_pop"] <- "population" #rename location
 citypopmerge <- citypopmerge[citypopmerge$location=="New York City",]
 cities <- merge(countyNYC,citypopmerge,by="location")
+
+
 names(counties)[names(counties) == "cases"] <- "casessum"
 names(counties)[names(counties) == "deaths"] <- "deathssum"
 names(cities)[names(cities) == "cases"] <- "casessum"
 names(cities)[names(cities) == "deaths"] <- "deathssum"
+names(USstates)[names(USstates) == "cases"] <- "casessum"
+names(USstates)[names(USstates) == "deaths"] <- "deathssum"
+
+names(USstates)[names(USstates) == "state"] <- "location"
 
 keeps <- c("date","location", "casessum","deathssum", "population")
 counties <- counties[ , (names(counties) %in% keeps)]
 cities <- cities[ , (names(cities) %in% keeps)]
-
+USstates <- USstates[ , (names(USstates) %in% keeps)]
 
 counties <- rbind(counties,cities)
 counties <-  counties %>% arrange(location, date) %>% group_by(location) %>%
@@ -133,7 +147,10 @@ counties <-  counties %>% arrange(location, date) %>% group_by(location) %>%
 counties <-  counties %>% arrange(location, date) %>% group_by(location) %>%
   mutate(deathsnew = deathssum - lag(deathssum, default = first(deathssum)))
 
-
+USstates <-  USstates %>% arrange(location, date) %>% group_by(location) %>%
+  mutate(casesnew = casessum - lag(casessum, default = first(casessum)))
+USstates <-  USstates %>% arrange(location, date) %>% group_by(location) %>%
+  mutate(deathsnew = deathssum - lag(deathssum, default = first(deathssum)))
 
 
 ##########################################################################
@@ -142,7 +159,7 @@ counties <-  counties %>% arrange(location, date) %>% group_by(location) %>%
 
 counties$type <- "county"
 countries$type <- "country"
-
+USstates$type <- "state"
 
 ratedata <- rbind(counties, countries)
 
@@ -161,6 +178,7 @@ ratedata <- ratedata[!ratedata$casesnew == 0,]
 
 country <- countries[!countries$casesnew == 0,]
 county <-counties[!counties$casesnew == 0,]
+state <-USstates[!USstates$casesnew == 0,]
 combined <- ratedata
 
 combined <- combined %>% arrange(location, date) %>% group_by(location) %>%
@@ -169,14 +187,20 @@ country <- country %>% arrange(location, date) %>% group_by(location) %>%
   mutate(diffDate = as.numeric(difftime(date, lag(date,1), units='days')))
 county <- county %>% arrange(location, date) %>% group_by(location) %>%
   mutate(diffDate = as.numeric(difftime(date, lag(date,1), units='days')))
+state <- state %>% arrange(location, date) %>% group_by(location) %>%
+  mutate(diffDate = as.numeric(difftime(date, lag(date,1), units='days')))
+
 
 combined$diffDate[is.na(combined$diffDate)] <- 0
 country$diffDate[is.na(country$diffDate)] <- 0
 county$diffDate[is.na(county$diffDate)] <- 0
+state$diffDate[is.na(state$diffDate)] <- 0
 
 combined <- combined %>% group_by(location) %>% mutate(Days = cumsum(diffDate))
 country <- country %>% group_by(location) %>% mutate(Days = cumsum(diffDate))
 county <- county %>% group_by(location) %>% mutate(Days = cumsum(diffDate))
+state <- state %>% group_by(location) %>% mutate(Days = cumsum(diffDate))
+
 
 #####
 combined <- combined %>%
@@ -190,6 +214,11 @@ country <- country %>%
   mutate(Diffgrowth = casesnew - lag(casesnew), # Difference in route between years
          Rate_percent = (Diffgrowth / diffDate)/casesnew * 100) # growth rate in percent
 county<- county %>%
+  # first sort by year
+  arrange(location, Days) %>% group_by(location) %>%
+  mutate(Diffgrowth = casesnew - lag(casesnew), # Difference in route between years
+         Rate_percent = (Diffgrowth / diffDate)/casesnew * 100) # growth rate in percent
+state<- state %>%
   # first sort by year
   arrange(location, Days) %>% group_by(location) %>%
   mutate(Diffgrowth = casesnew - lag(casesnew), # Difference in route between years
@@ -216,7 +245,7 @@ World2$Date <- as.Date(max(World$date))
 #  location == "Centre_Pennsylvania" | location == "New York City"| location == "South_Korea" | location == "Spain" |location=="Orleans_Louisiana" & casessum>1
 #)
 
-###############TOP 10 CODE ##########################################
+###############TOP 10 CODE FOR COUNTIES ##########################################
 
 ## COUNTY ORIGINAL top ten
 ## change to date field, and 'days' category
@@ -344,6 +373,135 @@ ratedata_n_sub2$date <- format(ratedata_n_sub2$date,'%A, %B %d, %Y')
 ratedata_n_sub3$date <- format(ratedata_n_sub3$date,'%A, %B %d, %Y')
 
 
+###############TOP 10 CODE FOR STATES ##########################################
+
+## COUNTY ORIGINAL top ten
+## change to date field, and 'days' category
+
+library(dplyr)
+library(zoo)
+
+####
+
+ratedata_oo <- USstates
+
+#ratedata_o$date <- as.Date(countiesoriginal$date, format = "%m/%d/%Y")
+
+ratedata_oo <- ratedata_oo[!ratedata_oo$casessum == 0,]
+
+ratedata_oo <- ratedata_oo %>% arrange(location, date) %>% group_by(location) %>%
+  mutate(diffDate = as.numeric(difftime(date, lag(date,1), units='days')))
+
+
+ratedata_oo$diffDate[is.na(ratedata_oo$diffDate)] <- 0
+
+ratedata_oo <- ratedata_oo %>% group_by(location) %>% mutate(Days = cumsum(diffDate))
+
+#ratedata_oo 
+
+ratedata_oo <- ratedata_oo %>%
+  arrange(location, Days) %>% group_by(location) %>%
+  mutate(Diffgrowth = casessum - lag(casessum), # Difference in route between years
+         Rate_percent = (Diffgrowth / diffDate)/casessum * 100) # growth rate in percent 
+
+
+ratedata_oo <- 
+  ratedata_oo %>%
+  mutate(date=as.Date(date, '%m/%d/%Y')) %>% 
+  group_by(location) %>% 
+  arrange(desc(date)) %>% 
+  slice(1:1)
+
+ratedata_oo$casepop <- ratedata_oo$casessum/ratedata_oo$population*100000
+ratedata_oo$deathpop <- ratedata_oo$deathssum/ratedata_oo$population*100000
+ratedata_oo$deathcase <- ratedata_oo$deathssum/ratedata_oo$casessum*1000
+
+ratedata_oo_sub1 <-
+  ratedata_oo %>%
+  group_by(location) %>%
+  summarize(casessum = max(casessum), date=date)
+ratedata_oo_sub1 <- ratedata_oo_sub1[with(ratedata_oo_sub1,order(-casessum)),]
+ratedata_oo_sub1 <- ratedata_oo_sub1[1:10,]
+
+ratedata_oo_sub1a <-
+  ratedata_oo %>%
+  group_by(location) %>%
+  summarize(deathssum = max(deathssum), date=date)
+ratedata_oo_sub1a <- ratedata_oo_sub1a[with(ratedata_oo_sub1a,order(-deathssum)),]
+ratedata_oo_sub1a <- ratedata_oo_sub1a[1:10,]
+
+ratedata_oo_sub2 <-
+  ratedata_oo %>%
+  group_by(location) %>%
+  summarize(casepop = max(casepop), date=date)
+ratedata_oo_sub2 <- ratedata_oo_sub2[with(ratedata_oo_sub2,order(-casepop)),]
+ratedata_oo_sub2<- ratedata_oo_sub2[1:10,]
+
+ratedata_oo_sub3 <-
+  ratedata_oo %>%
+  group_by(location) %>%
+  summarize(deathpop = max(deathpop), date=date)
+ratedata_oo_sub3 <- ratedata_oo_sub3[with(ratedata_oo_sub3,order(-deathpop)),]
+ratedata_oo_sub3<- ratedata_oo_sub3[1:10,]
+
+ratedata_oo_sub1$date <- format(ratedata_oo_sub1$date,'%A, %B %d, %Y')
+ratedata_oo_sub2$date <- format(ratedata_oo_sub2$date,'%A, %B %d, %Y')
+ratedata_oo_sub3$date <- format(ratedata_oo_sub3$date,'%A, %B %d, %Y')
+
+#### new
+
+ratedata_nn <- ratedata_oo %>%
+  arrange(location, Days) %>% group_by(location) %>%
+  mutate(Diffgrowth = casesnew - lag(casesnew), # Difference in route between years
+         Rate_percent = (Diffgrowth / diffDate)/casesnew * 100) # growth rate in percent 
+
+
+ratedata_nn <- 
+  ratedata_nn %>%
+  mutate(date=as.Date(date, '%m/%d/%Y')) %>% 
+  group_by(location) %>% 
+  arrange(desc(date)) %>% 
+  slice(1:1)
+
+ratedata_nn$casepop <- ratedata_nn$casesnew/ratedata_nn$population*100000
+ratedata_nn$deathpop <- ratedata_nn$deathsnew/ratedata_nn$population*100000
+ratedata_nn$deathcase <- ratedata_nn$deathsnew/ratedata_nn$casesnew*1000
+
+ratedata_nn_sub1 <-
+  ratedata_nn %>%
+  group_by(location) %>%
+  summarize(casesnew = max(casesnew), date=date)
+ratedata_nn_sub1 <- ratedata_nn_sub1[with(ratedata_nn_sub1,order(-casesnew)),]
+ratedata_nn_sub1 <- ratedata_nn_sub1[1:10,]
+
+ratedata_nn_sub1a <-
+  ratedata_nn %>%
+  group_by(location) %>%
+  summarize(deathsnew = max(deathsnew), date=date)
+ratedata_nn_sub1a <- ratedata_nn_sub1a[with(ratedata_nn_sub1a,order(-deathsnew)),]
+ratedata_nn_sub1a <- ratedata_nn_sub1a[1:10,]
+
+ratedata_nn_sub2 <-
+  ratedata_nn %>%
+  group_by(location) %>%
+  summarize(casepop = max(casepop), date=date)
+ratedata_nn_sub2 <- ratedata_nn_sub2[with(ratedata_nn_sub2,order(-casepop)),]
+ratedata_nn_sub2<- ratedata_nn_sub2[1:10,]
+
+ratedata_nn_sub3 <-
+  ratedata_nn %>%
+  group_by(location) %>%
+  summarize(deathpop = max(deathpop), date=date)
+ratedata_nn_sub3 <- ratedata_nn_sub3[with(ratedata_nn_sub3,order(-deathpop)),]
+ratedata_nn_sub3<- ratedata_nn_sub3[1:10,]
+
+ratedata_nn_sub1$date <- format(ratedata_nn_sub1$date,'%A, %B %d, %Y')
+ratedata_nn_sub1a$date <- format(ratedata_nn_sub1a$date,'%A, %B %d, %Y')
+ratedata_nn_sub2$date <- format(ratedata_nn_sub2$date,'%A, %B %d, %Y')
+ratedata_nn_sub3$date <- format(ratedata_nn_sub3$date,'%A, %B %d, %Y')
+
+
+
 
 ####################### SERVER ################################################
 
@@ -360,6 +518,11 @@ server <- function(input, output, session){
     
     plotinfo2 <- reactive({
       get(input$plotinfo2)
+    })
+    
+    
+    plotinfo3 <- reactive({
+      get(input$plotinfo3)
     })
   
     
@@ -539,11 +702,11 @@ server <- function(input, output, session){
     
   })
     
-############
+############ COUNTY TOP 10 PLOTS
     
     output$plotauto <- renderUI({
     
-    if(input$plotinfo2=="Top_10_US_Cumulative_Cases"){
+    if(input$plotinfo2=="Top10_County_Cumulative_Cases"){
       
       output$plot5<-renderPlot({
         theme_set(theme_bw())
@@ -567,7 +730,7 @@ server <- function(input, output, session){
     }
     
     
-    else if(input$plotinfo2=="Top_10_US_Cumulative_Deaths"){
+    else if(input$plotinfo2=="Top10_County_Cumulative_Deaths"){
       
       output$plot5a<-renderPlot({
         theme_set(theme_bw())
@@ -590,7 +753,7 @@ server <- function(input, output, session){
       plotOutput("plot5a")
     }
     
-    else if(input$plotinfo2=="Top_10_US_Cumulative_Cases_by_Population"){
+    else if(input$plotinfo2=="Top10_County_Cumulative_Cases_by_Population"){
       
       output$plot6<-renderPlot({
         theme_set(theme_bw())  # pre-set the bw theme.
@@ -613,7 +776,7 @@ server <- function(input, output, session){
       plotOutput("plot6")
     }
     
-    else if(input$plotinfo2=="Top_10_US_Cumulative_Deaths_by_Population"){
+    else if(input$plotinfo2=="Top10_County_Cumulative_Deaths_by_Population"){
       
       output$plot7<-renderPlot({
         theme_set(theme_bw())  # pre-set the bw theme.
@@ -634,7 +797,7 @@ server <- function(input, output, session){
     }
     
     
-    else if(input$plotinfo2=="Top_10_US_New_Cases"){
+    else if(input$plotinfo2=="Top10_County_New_Cases"){
       
       output$plot8<-renderPlot({
         theme_set(theme_bw())
@@ -657,7 +820,7 @@ server <- function(input, output, session){
     }
     
     
-    else if(input$plotinfo2=="Top_10_US_New_Deaths"){
+    else if(input$plotinfo2=="Top10_County_New_Deaths"){
       
       output$plot8a<-renderPlot({
         theme_set(theme_bw())
@@ -679,7 +842,7 @@ server <- function(input, output, session){
       plotOutput("plot8a")
     }
     
-    else if(input$plotinfo2=="Top_10_US_New_Cases_by_Population"){
+    else if(input$plotinfo2=="Top10_County_New_Cases_by_Population"){
       
       output$plot9<-renderPlot({
         theme_set(theme_bw())  # pre-set the bw theme.
@@ -701,7 +864,7 @@ server <- function(input, output, session){
       plotOutput("plot9")
     }
     
-    else if(input$plotinfo2=="Top_10_US_New_Deaths_by_Population"){
+    else if(input$plotinfo2=="Top10_County_New_Deaths_by_Population"){
       
       output$plot10<-renderPlot({
         theme_set(theme_bw())  # pre-set the bw theme.
@@ -720,15 +883,197 @@ server <- function(input, output, session){
       })
       plotOutput("plot10")
     }
+      
+   })
     
-             
+      ############ STATE TOP 10 PLOTS
     
+    output$plotauto2 <- renderUI({
+      
+        if(input$plotinfo3=="Top10_State_Cumulative_Cases"){
+        
+        output$plot11<-renderPlot({
+          theme_set(theme_bw())
+          g <- ggplot(data=ratedata_oo_sub1 , 
+                      aes(x=reorder(location,-casessum), y=casessum, fill=date)) +
+            geom_bar(stat="identity")+
+            labs(subtitle="Top 10 by US County/City",
+                 title="Cumulative Cases",x="Counties",y="Cumulative Cases") +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
+            theme(plot.title = element_text(hjust = 0.5))+ 
+            scale_y_continuous(labels = comma)
+          
+          if(input$logarithmicY)
+            g <- g + scale_y_log10()
+          
+          return(g)
+          
+          
+        })
+        plotOutput("plot11")
+      }
+      
+      
+      else if(input$plotinfo3=="Top10_State_Cumulative_Deaths"){
+        
+        output$plot12<-renderPlot({
+          theme_set(theme_bw())
+          g <- ggplot(data=ratedata_oo_sub1a , 
+                      aes(x=reorder(location,-deathssum), y=deathssum, fill=date)) +
+            geom_bar(stat="identity")+
+            labs(subtitle="Top 10 by US County/City",
+                 title="Cumulative Deaths",x="Counties",y="Cumulative Deaths") +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
+            theme(plot.title = element_text(hjust = 0.5))+ 
+            scale_y_continuous(labels = comma)
+          
+          if(input$logarithmicY)
+            g <- g + scale_y_log10()
+          
+          return(g)
+          
+          
+        })
+        plotOutput("plot12")
+      }
+      
+      else if(input$plotinfo3=="Top10_State_Cumulative_Cases_by_Population"){
+        
+        output$plot13<-renderPlot({
+          theme_set(theme_bw())  # pre-set the bw theme.
+          g <- ggplot(data=ratedata_oo_sub2, 
+                      aes(x=reorder(location,-casepop),y=casepop, fill=date)) +
+            geom_bar(stat="identity")+
+            labs(subtitle="Top 10 by US County/City",
+                 title="Cumulative Cases by 100K People",x="Counties",y="Cumulative Cases by 100K People") +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
+            theme(plot.title = element_text(hjust = 0.5))+ 
+            scale_y_continuous(labels = comma)
+          
+          if(input$logarithmicY)
+            g <- g + scale_y_log10()
+          
+          return(g)
+          
+          
+        })
+        plotOutput("plot13")
+      }
+      
+      else if(input$plotinfo3=="Top10_State_Cumulative_Deaths_by_Population"){
+        
+        output$plot14<-renderPlot({
+          theme_set(theme_bw())  # pre-set the bw theme.
+          g <- ggplot(data=ratedata_oo_sub3, aes(x=reorder(location,-deathpop),y=deathpop, fill=date)) + geom_bar(stat="identity")+
+            labs(subtitle="Top 10 by US County/City",
+                 title="Cumulative Deaths by 100K People",x="Counties",y="Cumulative Deaths by 100K People") +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
+            theme(plot.title = element_text(hjust = 0.5))+ 
+            scale_y_continuous(labels = comma)
+          
+          if(input$logarithmicY)
+            g <- g + scale_y_log10()
+          
+          return(g)
+          
+        })
+        plotOutput("plot14")
+      }
+      
+      
+      else if(input$plotinfo3=="Top10_State_New_Cases"){
+        
+        output$plot15<-renderPlot({
+          theme_set(theme_bw())
+          g <- ggplot(data=ratedata_nn_sub1 , aes(x=reorder(location,-casesnew), y=casesnew, fill=date)) +
+            geom_bar(stat="identity")+
+            labs(subtitle="Top 10 by US County/City",
+                 title="New Cases",x="Counties",y="New Cases") +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
+            theme(plot.title = element_text(hjust = 0.5))+ 
+            scale_y_continuous(labels = comma)
+          
+          if(input$logarithmicY)
+            g <- g + scale_y_log10()
+          
+          return(g)
+          
+          
+        })
+        plotOutput("plot15")
+      }
+      
+      
+      else if(input$plotinfo3=="Top10_State_New_Deaths"){
+        
+        output$plot16<-renderPlot({
+          theme_set(theme_bw())
+          g <- ggplot(data=ratedata_nn_sub1a , aes(x=reorder(n), y=deathsnew , fill=date)) +
+            geom_bar(stat="identity")+
+            labs(subtitle="Top 10 by US County/City",
+                 title="New Deaths",x="Counties",y="New Deaths") +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
+            theme(plot.title = element_text(hjust = 0.5))+ 
+            scale_y_continuous(labels = comma)
+          
+          if(input$logarithmicY)
+            g <- g + scale_y_log10()
+          
+          return(g)
+          
+          
+        })
+        plotOutput("plot16")
+      }
+      
+      else if(input$plotinfo3=="Top10_State_New_Cases_by_Population"){
+        
+        output$plot17<-renderPlot({
+          theme_set(theme_bw())  # pre-set the bw theme.
+          g <- ggplot(data=ratedata_nn_sub2, aes(x=reorder(location,-casepop),y=casepop, fill=date)) +
+            geom_bar(stat="identity")+
+            labs(subtitle="Top 10 by US County/City",
+                 title="New Cases by 100K People",x="Counties",y="New Cases by 100K People") +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
+            theme(plot.title = element_text(hjust = 0.5))+ 
+            scale_y_continuous(labels = comma)
+          
+          if(input$logarithmicY)
+            g <- g + scale_y_log10()
+          
+          return(g)
+          
+          
+        })
+        plotOutput("plot17")
+      }
+      
+      else if(input$plotinfo3=="Top10_State_New_Deaths_by_Population"){
+        
+        output$plot18<-renderPlot({
+          theme_set(theme_bw())  # pre-set the bw theme.
+          g <- ggplot(data=ratedata_nn_sub3, aes(x=reorder(location,-deathpop),y=deathpop, fill=date)) + geom_bar(stat="identity")+
+            labs(subtitle="Top 10 by US County/City",
+                 title="New Deaths by 100K People",x="Counties",y="New Deaths by 100K People") +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
+            theme(plot.title = element_text(hjust = 0.5))+ 
+            scale_y_continuous(labels = comma)
+          
+          if(input$logarithmicY)
+            g <- g + scale_y_log10()
+          
+          return(g)
+          
+        })
+        plotOutput("plot18")
+      }
+      
+      
+      
+      
+      
+      
+      
+    })
     
-    
-    
-    
-  })
-  
-  
-  
 }
