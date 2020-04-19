@@ -597,7 +597,7 @@ server <- function(input, output, session){
         if(input$logarithmicY)
           g <- g + scale_y_log10(labels = function(x) format(x, scientific = FALSE))
         
-        return(g)
+      return(g)
         
       })
       plotOutput("plot1")
@@ -619,7 +619,7 @@ server <- function(input, output, session){
         if(input$logarithmicY)
           g <- g + scale_y_log10()
         
-        return(g)
+       return(g)
         
       })
       plotOutput("plot1a")
@@ -643,7 +643,7 @@ server <- function(input, output, session){
         if(input$logarithmicY)
           g <- g + scale_y_log10()
         
-        return(g)
+       return(g)
         
         
       })
@@ -670,7 +670,7 @@ server <- function(input, output, session){
         if(input$logarithmicY)
           g <- g + scale_y_log10()
         
-        return(g)
+      return(g)
         
          
       })
@@ -719,8 +719,8 @@ server <- function(input, output, session){
          theme(plot.title = element_text(hjust = 0.5))+ 
          scale_y_continuous(labels = comma)
      
-       if(input$logarithmicY)
-         g <- g + scale_y_log10()
+    #   if(input$logarithmicY)
+    #     g <- g + scale_y_log10()
        
        return(g)
        
@@ -743,8 +743,8 @@ server <- function(input, output, session){
           theme(plot.title = element_text(hjust = 0.5))+ 
           scale_y_continuous(labels = comma)
         
-        if(input$logarithmicY)
-          g <- g + scale_y_log10()
+   #     if(input$logarithmicY)
+  #        g <- g + scale_y_log10()
         
         return(g)
         
@@ -766,8 +766,8 @@ server <- function(input, output, session){
           theme(plot.title = element_text(hjust = 0.5))+ 
          scale_y_continuous(labels = comma)
        
-       if(input$logarithmicY)
-         g <- g + scale_y_log10()
+   #    if(input$logarithmicY)
+  #       g <- g + scale_y_log10()
        
        return(g)
        
@@ -787,8 +787,8 @@ server <- function(input, output, session){
           theme(plot.title = element_text(hjust = 0.5))+ 
           scale_y_continuous(labels = comma)
         
-        if(input$logarithmicY)
-          g <- g + scale_y_log10()
+   #     if(input$logarithmicY)
+    #      g <- g + scale_y_log10()
         
         return(g)
         
@@ -809,8 +809,8 @@ server <- function(input, output, session){
           theme(plot.title = element_text(hjust = 0.5))+ 
           scale_y_continuous(labels = comma)
         
-        if(input$logarithmicY)
-          g <- g + scale_y_log10()
+   #     if(input$logarithmicY)
+  #        g <- g + scale_y_log10()
         
         return(g)
         
@@ -832,8 +832,8 @@ server <- function(input, output, session){
           theme(plot.title = element_text(hjust = 0.5))+ 
           scale_y_continuous(labels = comma)
         
-        if(input$logarithmicY)
-          g <- g + scale_y_log10()
+    #    if(input$logarithmicY)
+    #      g <- g + scale_y_log10()
         
         return(g)
         
@@ -854,8 +854,8 @@ server <- function(input, output, session){
           theme(plot.title = element_text(hjust = 0.5))+ 
           scale_y_continuous(labels = comma)
         
-        if(input$logarithmicY)
-          g <- g + scale_y_log10()
+   #     if(input$logarithmicY)
+  #        g <- g + scale_y_log10()
         
         return(g)
         
@@ -875,8 +875,8 @@ server <- function(input, output, session){
           theme(plot.title = element_text(hjust = 0.5))+ 
           scale_y_continuous(labels = comma)
         
-        if(input$logarithmicY)
-          g <- g + scale_y_log10()
+   #     if(input$logarithmicY)
+  #        g <- g + scale_y_log10()
         
         return(g)
         
@@ -903,8 +903,8 @@ server <- function(input, output, session){
             theme(plot.title = element_text(hjust = 0.5))+ 
             scale_y_continuous(labels = comma)
           
-          if(input$logarithmicY)
-            g <- g + scale_y_log10()
+      #    if(input$logarithmicY)
+      #      g <- g + scale_y_log10()
           
           return(g)
           
@@ -927,8 +927,8 @@ server <- function(input, output, session){
             theme(plot.title = element_text(hjust = 0.5))+ 
             scale_y_continuous(labels = comma)
           
-          if(input$logarithmicY)
-            g <- g + scale_y_log10()
+   #       if(input$logarithmicY)
+  #          g <- g + scale_y_log10()
           
           return(g)
           
@@ -950,8 +950,8 @@ server <- function(input, output, session){
             theme(plot.title = element_text(hjust = 0.5))+ 
             scale_y_continuous(labels = comma)
           
-          if(input$logarithmicY)
-            g <- g + scale_y_log10()
+     #     if(input$logarithmicY)
+    #        g <- g + scale_y_log10()
           
           return(g)
           
@@ -971,8 +971,8 @@ server <- function(input, output, session){
             theme(plot.title = element_text(hjust = 0.5))+ 
             scale_y_continuous(labels = comma)
           
-          if(input$logarithmicY)
-            g <- g + scale_y_log10()
+    #      if(input$logarithmicY)
+    #        g <- g + scale_y_log10()
           
           return(g)
           
@@ -993,8 +993,8 @@ server <- function(input, output, session){
             theme(plot.title = element_text(hjust = 0.5))+ 
             scale_y_continuous(labels = comma)
           
-          if(input$logarithmicY)
-            g <- g + scale_y_log10()
+   #       if(input$logarithmicY)
+  #          g <- g + scale_y_log10()
           
           return(g)
           
@@ -1016,8 +1016,8 @@ server <- function(input, output, session){
             theme(plot.title = element_text(hjust = 0.5))+ 
             scale_y_continuous(labels = comma)
           
-          if(input$logarithmicY)
-            g <- g + scale_y_log10()
+     #     if(input$logarithmicY)
+    #        g <- g + scale_y_log10()
           
           return(g)
           
@@ -1038,8 +1038,8 @@ server <- function(input, output, session){
             theme(plot.title = element_text(hjust = 0.5))+ 
             scale_y_continuous(labels = comma)
           
-          if(input$logarithmicY)
-            g <- g + scale_y_log10()
+      #    if(input$logarithmicY)
+      #      g <- g + scale_y_log10()
           
           return(g)
           
@@ -1059,10 +1059,10 @@ server <- function(input, output, session){
             theme(plot.title = element_text(hjust = 0.5))+ 
             scale_y_continuous(labels = comma)
           
-          if(input$logarithmicY)
-            g <- g + scale_y_log10()
+        #  if(input$logarithmicY)
+        #    g <- g + scale_y_log10()
           
-          return(g)
+        return(g)
           
         })
         plotOutput("plot18")
