@@ -161,7 +161,7 @@ counties$type <- "county"
 countries$type <- "country"
 USstates$type <- "state"
 
-ratedata <- rbind(counties, countries)
+ratedata <- rbind(counties, countries, USstates)
 
 ratedata$location <-as.factor(ratedata$location)
 
@@ -501,6 +501,134 @@ ratedata_nn_sub2$date <- format(ratedata_nn_sub2$date,'%A, %B %d, %Y')
 ratedata_nn_sub3$date <- format(ratedata_nn_sub3$date,'%A, %B %d, %Y')
 
 
+###############TOP 10 CODE FOR COUNTRIES ##########################################
+
+## COUNTRY ORIGINAL top ten
+## change to date field, and 'days' category
+
+library(dplyr)
+library(zoo)
+
+####
+
+ratedata_ooo <- countries
+
+#ratedata_o$date <- as.Date(countiesoriginal$date, format = "%m/%d/%Y")
+
+ratedata_ooo <- ratedata_ooo[!ratedata_ooo$casessum == 0,]
+
+ratedata_ooo <- ratedata_ooo %>% arrange(location, date) %>% group_by(location) %>%
+  mutate(diffDate = as.numeric(difftime(date, lag(date,1), units='days')))
+
+
+ratedata_ooo$diffDate[is.na(ratedata_ooo$diffDate)] <- 0
+
+ratedata_ooo <- ratedata_ooo %>% group_by(location) %>% mutate(Days = cumsum(diffDate))
+
+#ratedata_ooo 
+
+ratedata_ooo <- ratedata_ooo %>%
+  arrange(location, Days) %>% group_by(location) %>%
+  mutate(Diffgrowth = casessum - lag(casessum), # Difference in route between years
+         Rate_percent = (Diffgrowth / diffDate)/casessum * 100) # growth rate in percent 
+
+
+ratedata_ooo <- 
+  ratedata_ooo %>%
+  mutate(date=as.Date(date, '%m/%d/%Y')) %>% 
+  group_by(location) %>% 
+  arrange(desc(date)) %>% 
+  slice(1:1)
+
+ratedata_ooo$casepop <- ratedata_ooo$casessum/ratedata_ooo$population*100000
+ratedata_ooo$deathpop <- ratedata_ooo$deathssum/ratedata_ooo$population*100000
+ratedata_ooo$deathcase <- ratedata_ooo$deathssum/ratedata_ooo$casessum*1000
+
+ratedata_ooo_sub1 <-
+  ratedata_ooo %>%
+  group_by(location) %>%
+  summarize(casessum = max(casessum), date=date)
+ratedata_ooo_sub1 <- ratedata_ooo_sub1[with(ratedata_ooo_sub1,order(-casessum)),]
+ratedata_ooo_sub1 <- ratedata_ooo_sub1[1:10,]
+
+ratedata_ooo_sub1a <-
+  ratedata_ooo %>%
+  group_by(location) %>%
+  summarize(deathssum = max(deathssum), date=date)
+ratedata_ooo_sub1a <- ratedata_ooo_sub1a[with(ratedata_ooo_sub1a,order(-deathssum)),]
+ratedata_ooo_sub1a <- ratedata_ooo_sub1a[1:10,]
+
+ratedata_ooo_sub2 <-
+  ratedata_ooo %>%
+  group_by(location) %>%
+  summarize(casepop = max(casepop), date=date)
+ratedata_ooo_sub2 <- ratedata_ooo_sub2[with(ratedata_ooo_sub2,order(-casepop)),]
+ratedata_ooo_sub2<- ratedata_ooo_sub2[1:10,]
+
+ratedata_ooo_sub3 <-
+  ratedata_ooo %>%
+  group_by(location) %>%
+  summarize(deathpop = max(deathpop), date=date)
+ratedata_ooo_sub3 <- ratedata_ooo_sub3[with(ratedata_ooo_sub3,order(-deathpop)),]
+ratedata_ooo_sub3<- ratedata_ooo_sub3[1:10,]
+
+ratedata_ooo_sub1$date <- format(ratedata_ooo_sub1$date,'%A, %B %d, %Y')
+ratedata_ooo_sub2$date <- format(ratedata_ooo_sub2$date,'%A, %B %d, %Y')
+ratedata_ooo_sub3$date <- format(ratedata_ooo_sub3$date,'%A, %B %d, %Y')
+
+#### new
+
+ratedata_nnn <- ratedata_ooo %>%
+  arrange(location, Days) %>% group_by(location) %>%
+  mutate(Diffgrowth = casesnew - lag(casesnew), # Difference in route between years
+         Rate_percent = (Diffgrowth / diffDate)/casesnew * 100) # growth rate in percent 
+
+
+ratedata_nnn <- 
+  ratedata_nnn %>%
+  mutate(date=as.Date(date, '%m/%d/%Y')) %>% 
+  group_by(location) %>% 
+  arrange(desc(date)) %>% 
+  slice(1:1)
+
+ratedata_nnn$casepop <- ratedata_nnn$casesnew/ratedata_nnn$population*100000
+ratedata_nnn$deathpop <- ratedata_nnn$deathsnew/ratedata_nnn$population*100000
+ratedata_nnn$deathcase <- ratedata_nnn$deathsnew/ratedata_nnn$casesnew*1000
+
+ratedata_nnn_sub1 <-
+  ratedata_nnn %>%
+  group_by(location) %>%
+  summarize(casesnew = max(casesnew), date=date)
+ratedata_nnn_sub1 <- ratedata_nnn_sub1[with(ratedata_nnn_sub1,order(-casesnew)),]
+ratedata_nnn_sub1 <- ratedata_nnn_sub1[1:10,]
+
+ratedata_nnn_sub1a <-
+  ratedata_nnn %>%
+  group_by(location) %>%
+  summarize(deathsnew = max(deathsnew), date=date)
+ratedata_nnn_sub1a <- ratedata_nnn_sub1a[with(ratedata_nnn_sub1a,order(-deathsnew)),]
+ratedata_nnn_sub1a <- ratedata_nnn_sub1a[1:10,]
+
+ratedata_nnn_sub2 <-
+  ratedata_nnn %>%
+  group_by(location) %>%
+  summarize(casepop = max(casepop), date=date)
+ratedata_nnn_sub2 <- ratedata_nnn_sub2[with(ratedata_nnn_sub2,order(-casepop)),]
+ratedata_nnn_sub2<- ratedata_nnn_sub2[1:10,]
+
+ratedata_nnn_sub3 <-
+  ratedata_nnn %>%
+  group_by(location) %>%
+  summarize(deathpop = max(deathpop), date=date)
+ratedata_nnn_sub3 <- ratedata_nnn_sub3[with(ratedata_nnn_sub3,order(-deathpop)),]
+ratedata_nnn_sub3<- ratedata_nnn_sub3[1:10,]
+
+ratedata_nnn_sub1$date <- format(ratedata_nnn_sub1$date,'%A, %B %d, %Y')
+ratedata_nnn_sub1a$date <- format(ratedata_nnn_sub1a$date,'%A, %B %d, %Y')
+ratedata_nnn_sub2$date <- format(ratedata_nnn_sub2$date,'%A, %B %d, %Y')
+ratedata_nnn_sub3$date <- format(ratedata_nnn_sub3$date,'%A, %B %d, %Y')
+
+
 
 
 ####################### SERVER ################################################
@@ -511,10 +639,10 @@ server <- function(input, output, session){
     get(input$dataset)
   })
   
-    plotinfo <- reactive({
-    get(input$plotinfo)
+  column <- reactive({
+    get(input$column) 
   })
-    
+  
     
     plotinfo2 <- reactive({
       get(input$plotinfo2)
@@ -524,7 +652,10 @@ server <- function(input, output, session){
     plotinfo3 <- reactive({
       get(input$plotinfo3)
     })
-  
+ 
+    plotinfo4 <- reactive({
+      get(input$plotinfo4)
+    }) 
     
     
   observe({
@@ -532,7 +663,6 @@ server <- function(input, output, session){
    })
   
 
-  
   #observe({
   #updateSelectInput(session, "column", choices = names(dataset() %in% c("location","date")))
   #})
@@ -548,6 +678,12 @@ server <- function(input, output, session){
     )))
     updateSelectInput(session, "level", choices = column_levels)
   })
+  
+  #observeEvent(input$column,{
+  #  column_levels =  subset(dataset,  
+  #                a == input$a & 
+  #                  b %in% input$b[1]:input$b[2])
+  # }) 
   
   output$table <- DT::renderDataTable({
     subset(dataset(), dataset()[[input$column]] == input$level)
@@ -897,7 +1033,7 @@ server <- function(input, output, session){
           g <- ggplot(data=ratedata_oo_sub1 , 
                       aes(x=reorder(location,-casessum), y=casessum, fill=date)) +
             geom_bar(stat="identity")+
-            labs(subtitle="Top 10 by US County/City",
+            labs(subtitle="Top 10 by US State",
                  title="Cumulative Cases",x="Counties",y="Cumulative Cases") +
             theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
             theme(plot.title = element_text(hjust = 0.5))+ 
@@ -921,7 +1057,7 @@ server <- function(input, output, session){
           g <- ggplot(data=ratedata_oo_sub1a , 
                       aes(x=reorder(location,-deathssum), y=deathssum, fill=date)) +
             geom_bar(stat="identity")+
-            labs(subtitle="Top 10 by US County/City",
+            labs(subtitle="Top 10 by US State",
                  title="Cumulative Deaths",x="Counties",y="Cumulative Deaths") +
             theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
             theme(plot.title = element_text(hjust = 0.5))+ 
@@ -944,7 +1080,7 @@ server <- function(input, output, session){
           g <- ggplot(data=ratedata_oo_sub2, 
                       aes(x=reorder(location,-casepop),y=casepop, fill=date)) +
             geom_bar(stat="identity")+
-            labs(subtitle="Top 10 by US County/City",
+            labs(subtitle="Top 10 by US State",
                  title="Cumulative Cases by 100K People",x="Counties",y="Cumulative Cases by 100K People") +
             theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
             theme(plot.title = element_text(hjust = 0.5))+ 
@@ -965,7 +1101,7 @@ server <- function(input, output, session){
         output$plot14<-renderPlot({
           theme_set(theme_bw())  # pre-set the bw theme.
           g <- ggplot(data=ratedata_oo_sub3, aes(x=reorder(location,-deathpop),y=deathpop, fill=date)) + geom_bar(stat="identity")+
-            labs(subtitle="Top 10 by US County/City",
+            labs(subtitle="Top 10 by US State",
                  title="Cumulative Deaths by 100K People",x="Counties",y="Cumulative Deaths by 100K People") +
             theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
             theme(plot.title = element_text(hjust = 0.5))+ 
@@ -987,7 +1123,7 @@ server <- function(input, output, session){
           theme_set(theme_bw())
           g <- ggplot(data=ratedata_nn_sub1 , aes(x=reorder(location,-casesnew), y=casesnew, fill=date)) +
             geom_bar(stat="identity")+
-            labs(subtitle="Top 10 by US County/City",
+            labs(subtitle="Top 10 by US State",
                  title="New Cases",x="Counties",y="New Cases") +
             theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
             theme(plot.title = element_text(hjust = 0.5))+ 
@@ -1010,7 +1146,7 @@ server <- function(input, output, session){
           theme_set(theme_bw())
           g <- ggplot(data=ratedata_nn_sub1a , aes(x=reorder(n), y=deathsnew , fill=date)) +
             geom_bar(stat="identity")+
-            labs(subtitle="Top 10 by US County/City",
+            labs(subtitle="Top 10 by US State",
                  title="New Deaths",x="Counties",y="New Deaths") +
             theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
             theme(plot.title = element_text(hjust = 0.5))+ 
@@ -1032,7 +1168,7 @@ server <- function(input, output, session){
           theme_set(theme_bw())  # pre-set the bw theme.
           g <- ggplot(data=ratedata_nn_sub2, aes(x=reorder(location,-casepop),y=casepop, fill=date)) +
             geom_bar(stat="identity")+
-            labs(subtitle="Top 10 by US County/City",
+            labs(subtitle="Top 10 by US State",
                  title="New Cases by 100K People",x="Counties",y="New Cases by 100K People") +
             theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
             theme(plot.title = element_text(hjust = 0.5))+ 
@@ -1053,7 +1189,7 @@ server <- function(input, output, session){
         output$plot18<-renderPlot({
           theme_set(theme_bw())  # pre-set the bw theme.
           g <- ggplot(data=ratedata_nn_sub3, aes(x=reorder(location,-deathpop),y=deathpop, fill=date)) + geom_bar(stat="identity")+
-            labs(subtitle="Top 10 by US County/City",
+            labs(subtitle="Top 10 by US State",
                  title="New Deaths by 100K People",x="Counties",y="New Deaths by 100K People") +
             theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
             theme(plot.title = element_text(hjust = 0.5))+ 
@@ -1066,6 +1202,199 @@ server <- function(input, output, session){
           
         })
         plotOutput("plot18")
+      }
+      
+      
+      
+      
+      
+      
+      
+    })
+    
+    
+############################ TOP10 COUNTRIES ##################
+    
+    
+    
+    output$plotauto4 <- renderUI({
+      
+      if(input$plotinfo4=="Top10_Country_Cumulative_Cases"){
+        
+        output$plot19<-renderPlot({
+          theme_set(theme_bw())
+          g <- ggplot(data=ratedata_ooo_sub1 , 
+                      aes(x=reorder(location,-casessum), y=casessum, fill=date)) +
+            geom_bar(stat="identity")+
+            labs(subtitle="Top 10 by World Country",
+                 title="Cumulative Cases",x="Counties",y="Cumulative Cases") +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
+            theme(plot.title = element_text(hjust = 0.5))+ 
+            scale_y_continuous(labels = comma)
+          
+          #    if(input$logarithmicY)
+          #      g <- g + scale_y_log10()
+          
+          return(g)
+          
+          
+        })
+        plotOutput("plot19")
+      }
+      
+      
+      else if(input$plotinfo4=="Top10_Country_Cumulative_Deaths"){
+        
+        output$plot20<-renderPlot({
+          theme_set(theme_bw())
+          g <- ggplot(data=ratedata_ooo_sub1a , 
+                      aes(x=reorder(location,-deathssum), y=deathssum, fill=date)) +
+            geom_bar(stat="identity")+
+            labs(subtitle="Top 10 by World Country",
+                 title="Cumulative Deaths",x="Counties",y="Cumulative Deaths") +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
+            theme(plot.title = element_text(hjust = 0.5))+ 
+            scale_y_continuous(labels = comma)
+          
+          #       if(input$logarithmicY)
+          #          g <- g + scale_y_log10()
+          
+          return(g)
+          
+          
+        })
+        plotOutput("plot20")
+      }
+      
+      else if(input$plotinfo4=="Top10_Country_Cumulative_Cases_by_Population"){
+        
+        output$plot21<-renderPlot({
+          theme_set(theme_bw())  # pre-set the bw theme.
+          g <- ggplot(data=ratedata_ooo_sub2, 
+                      aes(x=reorder(location,-casepop),y=casepop, fill=date)) +
+            geom_bar(stat="identity")+
+            labs(subtitle="Top 10 by World Country",
+                 title="Cumulative Cases by 100K People",x="Counties",y="Cumulative Cases by 100K People") +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
+            theme(plot.title = element_text(hjust = 0.5))+ 
+            scale_y_continuous(labels = comma)
+          
+          #     if(input$logarithmicY)
+          #        g <- g + scale_y_log10()
+          
+          return(g)
+          
+          
+        })
+        plotOutput("plot21")
+      }
+      
+      else if(input$plotinfo4=="Top10_Country_Cumulative_Deaths_by_Population"){
+        
+        output$plot22<-renderPlot({
+          theme_set(theme_bw())  # pre-set the bw theme.
+          g <- ggplot(data=ratedata_ooo_sub3, aes(x=reorder(location,-deathpop),y=deathpop, fill=date)) + geom_bar(stat="identity")+
+            labs(subtitle="Top 10 by World Country",
+                 title="Cumulative Deaths by 100K People",x="Counties",y="Cumulative Deaths by 100K People") +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
+            theme(plot.title = element_text(hjust = 0.5))+ 
+            scale_y_continuous(labels = comma)
+          
+          #      if(input$logarithmicY)
+          #        g <- g + scale_y_log10()
+          
+          return(g)
+          
+        })
+        plotOutput("plot22")
+      }
+      
+      
+      else if(input$plotinfo4=="Top10_Country_New_Cases"){
+        
+        output$plot23<-renderPlot({
+          theme_set(theme_bw())
+          g <- ggplot(data=ratedata_nnn_sub1 , aes(x=reorder(location,-casesnew), y=casesnew, fill=date)) +
+            geom_bar(stat="identity")+
+            labs(subtitle="Top 10 by World Country",
+                 title="New Cases",x="Counties",y="New Cases") +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
+            theme(plot.title = element_text(hjust = 0.5))+ 
+            scale_y_continuous(labels = comma)
+          
+          #       if(input$logarithmicY)
+          #          g <- g + scale_y_log10()
+          
+          return(g)
+          
+          
+        })
+        plotOutput("plot23")
+      }
+      
+      
+      else if(input$plotinfo4=="Top10_Country_New_Deaths"){
+        
+        output$plot24<-renderPlot({
+          theme_set(theme_bw())
+          g <- ggplot(data=ratedata_nnn_sub1a , aes(x=reorder(n), y=deathsnew , fill=date)) +
+            geom_bar(stat="identity")+
+            labs(subtitle="Top 10 by World Country",
+                 title="New Deaths",x="Counties",y="New Deaths") +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
+            theme(plot.title = element_text(hjust = 0.5))+ 
+            scale_y_continuous(labels = comma)
+          
+          #     if(input$logarithmicY)
+          #        g <- g + scale_y_log10()
+          
+          return(g)
+          
+          
+        })
+        plotOutput("plot24")
+      }
+      
+      else if(input$plotinfo4=="Top10_Country_New_Cases_by_Population"){
+        
+        output$plot25<-renderPlot({
+          theme_set(theme_bw())  # pre-set the bw theme.
+          g <- ggplot(data=ratedata_nnn_sub2, aes(x=reorder(location,-casepop),y=casepop, fill=date)) +
+            geom_bar(stat="identity")+
+            labs(subtitle="Top 10 by World Country",
+                 title="New Cases by 100K People",x="Counties",y="New Cases by 100K People") +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
+            theme(plot.title = element_text(hjust = 0.5))+ 
+            scale_y_continuous(labels = comma)
+          
+          #    if(input$logarithmicY)
+          #      g <- g + scale_y_log10()
+          
+          return(g)
+          
+          
+        })
+        plotOutput("plot25")
+      }
+      
+      else if(input$plotinfo4=="Top10_Country_New_Deaths_by_Population"){
+        
+        output$plot26<-renderPlot({
+          theme_set(theme_bw())  # pre-set the bw theme.
+          g <- ggplot(data=ratedata_nnn_sub3, aes(x=reorder(location,-deathpop),y=deathpop, fill=date)) + geom_bar(stat="identity")+
+            labs(subtitle="Top 10 by World Country",
+                 title="New Deaths by 100K People",x="Counties",y="New Deaths by 100K People") +
+            theme(axis.text.x = element_text(angle = 90, hjust = 1,vjust=0.2, size=10))+
+            theme(plot.title = element_text(hjust = 0.5))+ 
+            scale_y_continuous(labels = comma)
+          
+          #  if(input$logarithmicY)
+          #    g <- g + scale_y_log10()
+          
+          return(g)
+          
+        })
+        plotOutput("plot26")
       }
       
       
