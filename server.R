@@ -206,22 +206,22 @@ state <- state %>% group_by(location) %>% mutate(Days = cumsum(diffDate))
 combined <- combined %>%
   # first sort by year
   arrange(location, Days) %>% group_by(location) %>%
-  mutate(Diffgrowth = casesnew - lag(casesnew), # Difference in route between years
+  mutate(Diffgrowth = casesnew - lag(casesnew,7L), # Difference in route between years
          Rate_percent = (Diffgrowth / diffDate)/casesnew * 100) # growth rate in percent
 country <- country %>%
   # first sort by year
   arrange(location, Days) %>% group_by(location) %>%
-  mutate(Diffgrowth = casesnew - lag(casesnew), # Difference in route between years
+  mutate(Diffgrowth = casesnew - lag(casesnew,7L), # Difference in route between years
          Rate_percent = (Diffgrowth / diffDate)/casesnew * 100) # growth rate in percent
 county<- county %>%
   # first sort by year
   arrange(location, Days) %>% group_by(location) %>%
-  mutate(Diffgrowth = casesnew - lag(casesnew), # Difference in route between years
+  mutate(Diffgrowth = casesnew - lag(casesnew,7L), # Difference in route between years
          Rate_percent = (Diffgrowth / diffDate)/casesnew * 100) # growth rate in percent
 state<- state %>%
   # first sort by year
   arrange(location, Days) %>% group_by(location) %>%
-  mutate(Diffgrowth = casesnew - lag(casesnew), # Difference in route between years
+  mutate(Diffgrowth = casesnew - lag(casesnew,7L), # Difference in route between years
          Rate_percent = (Diffgrowth / diffDate)/casesnew * 100) # growth rate in percent
 
 World <- country %>%
@@ -714,6 +714,10 @@ server <- function(input, output, session){
     })
   
   ################# CHOICES OF PLOTS ###############
+    
+  
+    
+  ################# MANUAL PLOTS ###############
   
   output$plot <- renderUI({
     
@@ -836,7 +840,38 @@ server <- function(input, output, session){
       plotOutput("plot4")
     }
     
+    else if(input$plotinfo=="Cases_Growth_Rate"){
+      
+      output$plotR1<-renderPlot({
+        dataplot <- dataset()
+        
+        dataplot <- dataset()
+        
+        theme_set(theme_bw())  # pre-set the bw theme.
+        g <- ggplot(data=subset(dataset(), dataset()[[input$column]] == input$level), 
+                    aes(x=Days,y=Rate_percent)) + 
+          labs(subtitle="Growth Rate over Time by Location",
+               title="Week over Week | Cases",x="Days",y="Growth Rate Cases") +
+          geom_line(aes(col=location),size=2) + 
+          geom_point()+
+          #geom_smooth(aes(col=location), method="loess", se=F) + 
+          scale_y_continuous(labels = comma) +
+          ylim(-100,100)
+        
+      #  if(input$logarithmicY)
+      #    g <- g + scale_y_log10()
+        
+        return(g)
+        
+        
+      })
+      plotOutput("plotR1")
+    }
+    
   })
+    
+    
+
     
 ############ COUNTY TOP 10 PLOTS
     
