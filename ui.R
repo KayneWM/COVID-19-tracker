@@ -18,10 +18,29 @@ tabPanel("Manual Plotting",
                 c("Cases","Cases_Growth_Rate", "Deaths","Cases_by_Population",
                 "Deaths_by_Population","Deaths_by_Cases")),
     
-    
     checkboxInput("logarithmicY", "show y-axis in log10", FALSE),
     br(),
-    #br(),
+    
+    sliderInput("dayRange",
+                "Growth Rate Plot: Choose range of Days to view:",
+                min = 1,
+                max = 120,
+                value = c(1, 100),
+                dragRange = TRUE),
+    
+    
+    br(),
+  #  checkboxInput("changeY", "Change Y axis to slider range", FALSE),
+   
+    sliderInput("percentRange",
+                "Growth Rate Plot: Choose range of Percent to view:",
+                min = -50,
+                max = 100,
+                value = c(1, 100),
+                dragRange = TRUE),
+    
+    
+      #br(),
     
     
   ), #sidebarpanelclose

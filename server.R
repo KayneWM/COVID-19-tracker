@@ -206,23 +206,23 @@ state <- state %>% group_by(location) %>% mutate(Days = cumsum(diffDate))
 combined <- combined %>%
   # first sort by year
   arrange(location, Days) %>% group_by(location) %>%
-  mutate(Diffgrowth = casesnew - lag(casesnew,7L), # Difference in route between years
-         Rate_percent = (Diffgrowth / diffDate)/casesnew * 100) # growth rate in percent
+  mutate(Diffgrowth = casesnew - lag(casesnew,1L), # Difference in route between years
+         Rate_percent = ((casessum / diffDate)/(lag(casessum,1L))-1) * 100) # growth rate in percent
 country <- country %>%
   # first sort by year
   arrange(location, Days) %>% group_by(location) %>%
-  mutate(Diffgrowth = casesnew - lag(casesnew,7L), # Difference in route between years
-         Rate_percent = (Diffgrowth / diffDate)/casesnew * 100) # growth rate in percent
+  mutate(Diffgrowth = casesnew - lag(casesnew,1L), # Difference in route between years
+         Rate_percent = ((casessum / diffDate)/(lag(casessum,1L))-1) * 100) # growth rate in percent
 county<- county %>%
   # first sort by year
   arrange(location, Days) %>% group_by(location) %>%
-  mutate(Diffgrowth = casesnew - lag(casesnew,7L), # Difference in route between years
-         Rate_percent = (Diffgrowth / diffDate)/casesnew * 100) # growth rate in percent
+  mutate(Diffgrowth = casesnew - lag(casesnew,1L), # Difference in route between years
+         Rate_percent = ((casessum / diffDate)/(lag(casessum,1L))-1) * 100) # growth rate in percent
 state<- state %>%
   # first sort by year
   arrange(location, Days) %>% group_by(location) %>%
-  mutate(Diffgrowth = casesnew - lag(casesnew,7L), # Difference in route between years
-         Rate_percent = (Diffgrowth / diffDate)/casesnew * 100) # growth rate in percent
+  mutate(Diffgrowth = casesnew - lag(casesnew,1L), # Difference in route between years
+         Rate_percent = ((casessum / diffDate)/(lag(casessum,1L))-1) * 100) # growth rate in percent
 
 World <- country %>%
   # first sort by year
@@ -274,7 +274,7 @@ ratedata_o <- ratedata_o %>% group_by(location) %>% mutate(Days = cumsum(diffDat
 ratedata_o <- ratedata_o %>%
   arrange(location, Days) %>% group_by(location) %>%
   mutate(Diffgrowth = casessum - lag(casessum), # Difference in route between years
-         Rate_percent = (Diffgrowth / diffDate)/casessum * 100) # growth rate in percent 
+         Rate_percent = (Diffgrowth / diffDate)/lag(casessum) * 100) # growth rate in percent 
 
 
 ratedata_o <- 
@@ -402,7 +402,7 @@ ratedata_oo <- ratedata_oo %>% group_by(location) %>% mutate(Days = cumsum(diffD
 ratedata_oo <- ratedata_oo %>%
   arrange(location, Days) %>% group_by(location) %>%
   mutate(Diffgrowth = casessum - lag(casessum), # Difference in route between years
-         Rate_percent = (Diffgrowth / diffDate)/casessum * 100) # growth rate in percent 
+         Rate_percent = (Diffgrowth / diffDate)/lag(casessum) * 100) # growth rate in percent 
 
 
 ratedata_oo <- 
@@ -530,7 +530,7 @@ ratedata_ooo <- ratedata_ooo %>% group_by(location) %>% mutate(Days = cumsum(dif
 ratedata_ooo <- ratedata_ooo %>%
   arrange(location, Days) %>% group_by(location) %>%
   mutate(Diffgrowth = casessum - lag(casessum), # Difference in route between years
-         Rate_percent = (Diffgrowth / diffDate)/casessum * 100) # growth rate in percent 
+         Rate_percent = (Diffgrowth / diffDate)/lag(casessum) * 100) # growth rate in percent 
 
 
 ratedata_ooo <- 
@@ -840,6 +840,10 @@ server <- function(input, output, session){
       plotOutput("plot4")
     }
     
+    
+    
+    
+    
     else if(input$plotinfo=="Cases_Growth_Rate"){
       
       output$plotR1<-renderPlot({
@@ -847,21 +851,33 @@ server <- function(input, output, session){
         
         dataplot <- dataset()
         
+        dayRange <- seq(input$dayRange[1], input$dayRange[2]) 
+        percentRange <- seq(input$percentRange[1], input$percentRange[2])
+        
+        # Subsetting data: 
+        subset1 <- subset(dataset(), dataset()[[input$column]] == input$level)
+        subset2 <- subset1[which(subset1$Days %in% dayRange | 
+                                   subset1$Rate_percent %in% percentRange),] 
+        
+        #& subset1$Rate_Percent %in% percentRange
+        #subset1$Days %in% dayRange & 
+        
         theme_set(theme_bw())  # pre-set the bw theme.
-        g <- ggplot(data=subset(dataset(), dataset()[[input$column]] == input$level), 
+        g <- ggplot(data=subset2, 
                     aes(x=Days,y=Rate_percent)) + 
           labs(subtitle="Growth Rate over Time by Location",
-               title="Week over Week | Cases",x="Days",y="Growth Rate Cases") +
+               title="Daily | Cases",x="Days",y="Growth Rate %") +
           geom_line(aes(col=location),size=2) + 
           geom_point()+
           #geom_smooth(aes(col=location), method="loess", se=F) + 
           scale_y_continuous(labels = comma) +
-          ylim(-100,100)
+          ylim(input$percentRange[1], input$percentRange[2])
         
-      #  if(input$logarithmicY)
-      #    g <- g + scale_y_log10()
+        #if(input$changeY)
+         g <- g + ylim(input$percentRange[1], input$percentRange[2])
         
         return(g)
+        
         
         
       })
@@ -869,6 +885,13 @@ server <- function(input, output, session){
     }
     
   })
+    
+    
+
+       
+ 
+        
+      
     
     
 
